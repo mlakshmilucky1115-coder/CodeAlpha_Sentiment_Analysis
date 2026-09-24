@@ -1,4 +1,5 @@
 import os
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -73,10 +74,18 @@ df = df.dropna(subset=["cleaned_review"]).copy()
 # Convert review text to string
 df["cleaned_review"] = df["cleaned_review"].astype(str)
 
+# Make sure review score is numeric
+df["review_score"] = pd.to_numeric(
+    df["review_score"],
+    errors="coerce"
+)
+
+# Remove rows where review score is missing
+df = df.dropna(subset=["review_score"]).copy()
+
 
 print("\nDataset Shape After Removing Missing Reviews:")
 print(df.shape)
-
 
 print("\nMissing Values After Cleaning:")
 print(df.isnull().sum())
@@ -123,7 +132,11 @@ print("\n" + "=" * 60)
 print("REVIEW SCORE DISTRIBUTION")
 print("=" * 60)
 
-score_counts = df["review_score"].value_counts().sort_index()
+score_counts = (
+    df["review_score"]
+    .value_counts()
+    .sort_index()
+)
 
 print("\nReview Score Distribution:")
 print(score_counts)
@@ -137,7 +150,10 @@ print("\n" + "=" * 60)
 print("REVIEW LENGTH ANALYSIS")
 print("=" * 60)
 
-avg_length = df.groupby("sentiments")["cleaned_review_length"].mean()
+avg_length = (
+    df.groupby("sentiments")["cleaned_review_length"]
+    .mean()
+)
 
 print("\nAverage Review Length by Sentiment:")
 print(avg_length)
@@ -151,7 +167,10 @@ print("\n" + "=" * 60)
 print("REVIEW SCORE BY SENTIMENT")
 print("=" * 60)
 
-avg_score = df.groupby("sentiments")["review_score"].mean()
+avg_score = (
+    df.groupby("sentiments")["review_score"]
+    .mean()
+)
 
 print("\nAverage Review Score by Sentiment:")
 print(avg_score)
@@ -200,7 +219,10 @@ df["vader_sentiment"] = df["vader_score"].apply(
 # 12. VADER SENTIMENT DISTRIBUTION
 # ============================================================
 
-vader_counts = df["vader_sentiment"].value_counts()
+vader_counts = (
+    df["vader_sentiment"]
+    .value_counts()
+)
 
 print("\nVADER Sentiment Distribution:")
 print(vader_counts)
@@ -267,10 +289,18 @@ os.makedirs("charts", exist_ok=True)
 
 plt.figure(figsize=(8, 5))
 
-sns.countplot(
-    data=df,
-    x="sentiments",
-    order=["negative", "neutral", "positive"]
+sentiment_plot_counts = (
+    df["sentiments"]
+    .value_counts()
+    .reindex(
+        ["negative", "neutral", "positive"],
+        fill_value=0
+    )
+)
+
+plt.bar(
+    sentiment_plot_counts.index,
+    sentiment_plot_counts.values
 )
 
 plt.title("Original Sentiment Distribution")
@@ -281,7 +311,8 @@ plt.tight_layout()
 
 plt.savefig(
     "charts/sentiment_distribution.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -293,21 +324,37 @@ plt.close()
 
 plt.figure(figsize=(8, 5))
 
-sns.countplot(
-    data=df,
-    x="review_score",
-    order=[1, 2, 3, 4, 5]
+score_plot_counts = (
+    df["review_score"]
+    .value_counts()
+    .reindex([1, 2, 3, 4, 5], fill_value=0)
+)
+
+plt.bar(
+    score_plot_counts.index.astype(str),
+    score_plot_counts.values
 )
 
 plt.title("Review Score Distribution")
 plt.xlabel("Review Score")
 plt.ylabel("Number of Reviews")
 
+# Add values above bars
+for i, value in enumerate(score_plot_counts.values):
+    plt.text(
+        i,
+        value,
+        str(value),
+        ha="center",
+        va="bottom"
+    )
+
 plt.tight_layout()
 
 plt.savefig(
     "charts/review_score_distribution.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -319,21 +366,40 @@ plt.close()
 
 plt.figure(figsize=(8, 5))
 
-sns.countplot(
-    data=df,
-    x="vader_sentiment",
-    order=["negative", "neutral", "positive"]
+vader_plot_counts = (
+    df["vader_sentiment"]
+    .value_counts()
+    .reindex(
+        ["negative", "neutral", "positive"],
+        fill_value=0
+    )
+)
+
+plt.bar(
+    vader_plot_counts.index,
+    vader_plot_counts.values
 )
 
 plt.title("VADER Sentiment Distribution")
 plt.xlabel("VADER Sentiment")
 plt.ylabel("Number of Reviews")
 
+# Add values above bars
+for i, value in enumerate(vader_plot_counts.values):
+    plt.text(
+        i,
+        value,
+        str(value),
+        ha="center",
+        va="bottom"
+    )
+
 plt.tight_layout()
 
 plt.savefig(
     "charts/vader_sentiment_distribution.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -345,10 +411,9 @@ plt.close()
 
 plt.figure(figsize=(8, 5))
 
-sns.histplot(
+plt.hist(
     df["vader_score"],
-    bins=30,
-    kde=True
+    bins=30
 )
 
 plt.title("VADER Sentiment Score Distribution")
@@ -359,7 +424,8 @@ plt.tight_layout()
 
 plt.savefig(
     "charts/vader_score_distribution.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -371,22 +437,39 @@ plt.close()
 
 plt.figure(figsize=(8, 5))
 
-sns.barplot(
-    data=df,
-    x="sentiments",
-    y="review_score",
-    order=["negative", "neutral", "positive"]
+avg_score_plot = (
+    df.groupby("sentiments")["review_score"]
+    .mean()
+    .reindex(
+        ["negative", "neutral", "positive"]
+    )
+)
+
+plt.bar(
+    avg_score_plot.index,
+    avg_score_plot.values
 )
 
 plt.title("Average Review Score by Sentiment")
 plt.xlabel("Sentiment")
 plt.ylabel("Average Review Score")
 
+# Add values above bars
+for i, value in enumerate(avg_score_plot.values):
+    plt.text(
+        i,
+        value,
+        f"{value:.2f}",
+        ha="center",
+        va="bottom"
+    )
+
 plt.tight_layout()
 
 plt.savefig(
     "charts/average_score_by_sentiment.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -398,22 +481,39 @@ plt.close()
 
 plt.figure(figsize=(8, 5))
 
-sns.barplot(
-    data=df,
-    x="sentiments",
-    y="cleaned_review_length",
-    order=["negative", "neutral", "positive"]
+avg_length_plot = (
+    df.groupby("sentiments")["cleaned_review_length"]
+    .mean()
+    .reindex(
+        ["negative", "neutral", "positive"]
+    )
+)
+
+plt.bar(
+    avg_length_plot.index,
+    avg_length_plot.values
 )
 
 plt.title("Average Review Length by Sentiment")
 plt.xlabel("Sentiment")
 plt.ylabel("Average Review Length")
 
+# Add values above bars
+for i, value in enumerate(avg_length_plot.values):
+    plt.text(
+        i,
+        value,
+        f"{value:.2f}",
+        ha="center",
+        va="bottom"
+    )
+
 plt.tight_layout()
 
 plt.savefig(
     "charts/average_review_length_by_sentiment.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -449,7 +549,8 @@ plt.tight_layout()
 
 plt.savefig(
     "charts/sentiment_comparison.png",
-    dpi=300
+    dpi=300,
+    bbox_inches="tight"
 )
 
 plt.close()
@@ -502,6 +603,14 @@ print(df["vader_sentiment"].value_counts())
 print(
     "\nAverage VADER Score:",
     round(df["vader_score"].mean(), 4)
+)
+
+
+print("\nReview Score Counts:")
+print(
+    df["review_score"]
+    .value_counts()
+    .sort_index()
 )
 
 
